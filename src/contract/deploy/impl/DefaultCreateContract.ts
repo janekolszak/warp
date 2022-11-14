@@ -1,6 +1,7 @@
 /* eslint-disable */
 import Arweave from 'arweave';
 import Transaction from 'arweave/node/lib/transaction';
+import { WarpFetchWrapper } from '../../../core/WarpFetchWrapper';
 import { SmartWeaveTags } from '../../../core/SmartWeaveTags';
 import { Warp } from '../../../core/Warp';
 import { WARP_GW_URL } from '../../../core/WarpFactory';
@@ -10,9 +11,11 @@ import { SourceImpl } from './SourceImpl';
 
 export class DefaultCreateContract implements CreateContract {
   private readonly logger = LoggerFactory.INST.create('DefaultCreateContract');
+  private readonly warpFetchWrapper: WarpFetchWrapper;
 
   constructor(private readonly arweave: Arweave, private warp: Warp) {
     this.deployFromSourceTx = this.deployFromSourceTx.bind(this);
+    this.warpFetchWrapper = new WarpFetchWrapper(this.warp);
   }
 
   async deploy(contractData: ContractData, disableBundling?: boolean): Promise<ContractDeploy> {
@@ -118,7 +121,7 @@ export class DefaultCreateContract implements CreateContract {
       };
     }
 
-    const response = await fetch(`${WARP_GW_URL}/gateway/contracts/deploy`, {
+    const response = await this.warpFetchWrapper.fetch(`${WARP_GW_URL}/gateway/contracts/deploy`, {
       method: 'POST',
       body: JSON.stringify(body),
       headers: {
