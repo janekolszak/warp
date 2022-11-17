@@ -4,9 +4,12 @@ export async function handle(state, action) {
   const input = action.input;
   const caller = action.caller;
 
-  if (input.function === 'transfer') {
+  if (input.function === 'testUnsafe') {
     await SmartWeave.unsafeClient.transactions.getData("some_id");
+    return {state};
+  }
 
+  if (input.function === 'transfer') {
     const target = input.target;
     const qty = input.qty;
 

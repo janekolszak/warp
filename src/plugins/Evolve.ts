@@ -1,4 +1,4 @@
-import { EvolveState } from '../contract/Contract';
+import { ContractError, EvolveState } from '../contract/Contract';
 import { LoggerFactory } from '../logging/LoggerFactory';
 import { ExecutionContext } from '../core/ExecutionContext';
 import { ExecutionContextModifier } from '../core/ExecutionContextModifier';
@@ -61,10 +61,14 @@ export class Evolve implements ExecutionContextModifier {
 
           return executionContext;
         } catch (e) {
-          throw new SmartWeaveError(SmartWeaveErrorType.CONTRACT_NOT_FOUND, {
-            message: `Error while evolving ${contractTxId} from ${currentSrcTxId} to ${evolvedSrcTxId}: ${e}`,
-            requestedTxId: contractTxId
-          });
+          if (e.name === 'ContractError' && e.subtype === 'unsafeClientSkip') {
+            throw e;
+          } else {
+            throw new SmartWeaveError(SmartWeaveErrorType.CONTRACT_NOT_FOUND, {
+              message: `Error while evolving ${contractTxId} from ${currentSrcTxId} to ${evolvedSrcTxId}: ${e}`,
+              requestedTxId: contractTxId
+            });
+          }
         }
       }
     }

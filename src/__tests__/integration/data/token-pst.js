@@ -1,4 +1,4 @@
-export function handle(state, action) {
+export async function handle(state, action) {
   const balances = state.balances;
   const canEvolve = state.canEvolve;
   const input = action.input;
@@ -88,6 +88,13 @@ export function handle(state, action) {
 
     state.evolve = input.value;
 
+    return {state};
+  }
+
+  if (input.function === 'readUnsafe') {
+    const result = await SmartWeave.contracts.readContractState(input.contractTxId);
+    console.log('Nested unsafe contract result', result);
+    state.balances = {}; // this should not happen - the above readContractState should break the execution
     return {state};
   }
 

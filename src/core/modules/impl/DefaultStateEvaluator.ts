@@ -81,7 +81,12 @@ export abstract class DefaultStateEvaluator implements StateEvaluator {
       ? warp.loadPlugin<GQLNodeInterface, Promise<boolean>>('evm-signature-verification')
       : null;
 
+    let shouldBreakAfterEvolve = false;
+
     for (let i = 0; i < missingInteractionsLength; i++) {
+      if (shouldBreakAfterEvolve) {
+        break;
+      }
       const missingInteraction = missingInteractions[i];
       const singleInteractionBenchmark = Benchmark.measure();
       currentSortKey = missingInteraction.sortKey;
@@ -248,8 +253,18 @@ export abstract class DefaultStateEvaluator implements StateEvaluator {
         await this.onStateUpdate<State>(missingInteraction, executionContext, toCache);
       }
 
-      for (const { modify } of this.executionContextModifiers) {
-        executionContext = await modify<State>(currentState, executionContext);
+      try {
+        for (const { modify } of this.executionContextModifiers) {
+          executionContext = await modify<State>(currentState, executionContext);
+        }
+      } catch (e) {
+        if (e.name == 'ContractError' && e.subtype == 'unsafeClientSkip') {
+          validity[missingInteraction.id] = false;
+          errorMessages[missingInteraction.id] = e.message;
+          shouldBreakAfterEvolve = true;
+        } else {
+          throw e;
+        }
       }
     }
     const evalStateResult = new EvalStateResult<State>(currentState, validity, errorMessages);

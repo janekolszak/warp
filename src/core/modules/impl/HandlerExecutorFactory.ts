@@ -20,7 +20,7 @@ import { MemCache } from '../../../cache/impl/MemCache';
 import BigNumber from '../../../legacy/bignumber';
 
 class ContractError extends Error {
-  constructor(message) {
+  constructor(message, readonly subtype?) {
     super(message);
     this.name = 'ContractError';
   }
@@ -157,11 +157,25 @@ export class HandlerExecutorFactory implements ExecutorFactory<HandlerApi<unknow
       this.logger.info('Creating handler for js contract', contractDefinition.txId);
       const normalizedSource = normalizeContractSource(contractDefinition.src, evaluationOptions.useVM2);
 
-      if (!evaluationOptions.allowUnsafeClient) {
-        if (normalizedSource.includes('SmartWeave.unsafeClient')) {
-          throw new Error(
-            'Using unsafeClient is not allowed by default. Use EvaluationOptions.allowUnsafeClient flag.'
-          );
+      if (normalizedSource.includes('unsafeClient')) {
+        switch (evaluationOptions.unsafeClient) {
+          case 'allow': {
+            this.logger.warn(`Reading unsafe contract ${contractDefinition.txId}, evaluation is non-deterministic!`);
+            break;
+          }
+          case 'throw':
+            throw new Error(
+              'Using unsafeClient is not allowed by default. Use EvaluationOptions.allowUnsafeClient flag.'
+            );
+          case 'skip': {
+            console.log('Skipping unsafe contract');
+            throw new ContractError(
+              `Skipping evaluation of the unsafe contract ${contractDefinition.txId}.`,
+              'unsafeClientSkip'
+            );
+          }
+          default:
+            throw new Error(`Unknown unsafeClient setting ${evaluationOptions.unsafeClient}`);
         }
       }
       if (!evaluationOptions.allowBigInt) {
