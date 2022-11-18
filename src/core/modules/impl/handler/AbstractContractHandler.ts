@@ -1,4 +1,4 @@
-import { ContractError, CurrentTx } from '../../../../contract/Contract';
+import { CurrentTx } from '../../../../contract/Contract';
 import { ContractDefinition } from '../../../../core/ContractDefinition';
 import { ExecutionContext } from '../../../../core/ExecutionContext';
 import { EvalStateResult } from '../../../../core/modules/StateEvaluator';
@@ -6,7 +6,7 @@ import { GQLNodeInterface } from '../../../../legacy/gqlResult';
 import { SmartWeaveGlobal } from '../../../../legacy/smartweave-global';
 import { LoggerFactory } from '../../../../logging/LoggerFactory';
 import { deepCopy } from '../../../../utils/utils';
-import { HandlerApi, InteractionData, InteractionResult } from '../HandlerExecutorFactory';
+import { ContractError, HandlerApi, InteractionData, InteractionResult } from '../HandlerExecutorFactory';
 
 export abstract class AbstractContractHandler<State> implements HandlerApi<State> {
   protected logger = LoggerFactory.INST.create('ContractHandler');
@@ -52,7 +52,7 @@ export abstract class AbstractContractHandler<State> implements HandlerApi<State
         input
       };
 
-      this.logger.debug('swGlobal.write call:', debugData);
+      console.log('swGlobal.write call:', debugData);
 
       // The contract that we want to call and modify its state
       const calleeContract = executionContext.warp.contract(contractTxId, executionContext.contract, {
@@ -98,7 +98,7 @@ export abstract class AbstractContractHandler<State> implements HandlerApi<State
 
   protected assignViewContractState<Input>(executionContext: ExecutionContext<State>) {
     this.swGlobal.contracts.viewContractState = async <View>(contractTxId: string, input: any) => {
-      this.logger.debug('swGlobal.viewContractState call:', {
+      console.log('swGlobal.viewContractState call:', {
         from: this.contractDefinition.txId,
         to: contractTxId,
         input
@@ -119,7 +119,7 @@ export abstract class AbstractContractHandler<State> implements HandlerApi<State
     interactionTx: GQLNodeInterface
   ) {
     this.swGlobal.contracts.readContractState = async (contractTxId: string, returnValidity?: boolean) => {
-      this.logger.debug('swGlobal.readContractState call:', {
+      console.log('swGlobal.readContractState call:', {
         from: this.contractDefinition.txId,
         to: contractTxId,
         sortKey: interactionTx.sortKey,

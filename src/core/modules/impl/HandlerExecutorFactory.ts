@@ -19,8 +19,8 @@ import { normalizeContractSource } from './normalize-source';
 import { MemCache } from '../../../cache/impl/MemCache';
 import BigNumber from '../../../legacy/bignumber';
 
-class ContractError extends Error {
-  constructor(message, readonly subtype?) {
+export class ContractError extends Error {
+  constructor(message, readonly subtype?: string, readonly uuid?: string, readonly traceData?: string) {
     super(message);
     this.name = 'ContractError';
   }
@@ -156,7 +156,8 @@ export class HandlerExecutorFactory implements ExecutorFactory<HandlerApi<unknow
     } else {
       this.logger.info('Creating handler for js contract', contractDefinition.txId);
       const normalizedSource = normalizeContractSource(contractDefinition.src, evaluationOptions.useVM2);
-
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const crypto = require('node:crypto');
       if (normalizedSource.includes('unsafeClient')) {
         switch (evaluationOptions.unsafeClient) {
           case 'allow': {
@@ -168,10 +169,15 @@ export class HandlerExecutorFactory implements ExecutorFactory<HandlerApi<unknow
               'Using unsafeClient is not allowed by default. Use EvaluationOptions.allowUnsafeClient flag.'
             );
           case 'skip': {
-            console.log('Skipping unsafe contract');
+            const uuid = crypto.randomUUID();
+            console.trace('Skipping unsafe contract', {
+              contract: contractDefinition.txId,
+              uuid
+            });
             throw new ContractError(
               `Skipping evaluation of the unsafe contract ${contractDefinition.txId}.`,
-              'unsafeClientSkip'
+              'unsafeClientSkip',
+              uuid
             );
           }
           default:

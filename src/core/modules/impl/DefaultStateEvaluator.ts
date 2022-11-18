@@ -65,7 +65,7 @@ export abstract class DefaultStateEvaluator implements StateEvaluator {
 
     const depth = executionContext.contract.callDepth();
 
-    this.logger.info(
+    console.log(
       `${indent(depth)}Evaluating state for ${contractDefinition.txId} [${missingInteractions.length} non-cached of ${
         sortedInteractions.length
       } all]`
@@ -109,7 +109,7 @@ export abstract class DefaultStateEvaluator implements StateEvaluator {
         }
       }
 
-      this.logger.debug(
+      console.log(
         `${indent(depth)}[${contractDefinition.txId}][${missingInteraction.id}][${missingInteraction.block.height}]: ${
           missingInteractions.indexOf(missingInteraction) + 1
         }/${missingInteractions.length} [of all:${sortedInteractions.length}]`
@@ -121,7 +121,7 @@ export abstract class DefaultStateEvaluator implements StateEvaluator {
       if (isInteractWrite && internalWrites) {
         // evaluating txId of the contract that is writing on THIS contract
         const writingContractTxId = this.tagsParser.getContractTag(missingInteraction);
-        this.logger.debug(`${indent(depth)}Internal Write - Loading writing contract`, writingContractTxId);
+        console.log(`${indent(depth)}Internal Write - Loading writing contract`, writingContractTxId);
 
         const interactionCall: InteractionCall = contract
           .getCallStack()
@@ -145,16 +145,24 @@ export abstract class DefaultStateEvaluator implements StateEvaluator {
          This in turn will cause the state of THIS contract to be
          updated in cache - see {@link ContractHandlerApi.assignWrite}
          */
-        await writingContract.readState(missingInteraction.sortKey, [
-          ...(currentTx || []),
-          {
-            contractTxId: contractDefinition.txId, //not: writingContractTxId!
-            interactionTxId: missingInteraction.id
+        let newState = null;
+        try {
+          await writingContract.readState(missingInteraction.sortKey, [
+            ...(currentTx || []),
+            {
+              contractTxId: contractDefinition.txId, //not: writingContractTxId!
+              interactionTxId: missingInteraction.id
+            }
+          ]);
+          newState = await this.internalWriteState<State>(contractDefinition.txId, missingInteraction.sortKey);
+        } catch (e) {
+          if (e.name == 'ContractError' && e.subtype == 'unsafeClientSkip') {
+            this.logger.warn('Skipping unsafe contract in internal write');
+            errorMessages[missingInteraction.id] = e;
           }
-        ]);
+        }
 
         // loading latest state of THIS contract from cache
-        const newState = await this.internalWriteState<State>(contractDefinition.txId, missingInteraction.sortKey);
         if (newState !== null) {
           currentState = newState.cachedValue.state;
           // we need to update the state in the wasm module

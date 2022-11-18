@@ -1,4 +1,4 @@
-import { ContractError, EvolveState } from '../contract/Contract';
+import { EvolveState } from '../contract/Contract';
 import { LoggerFactory } from '../logging/LoggerFactory';
 import { ExecutionContext } from '../core/ExecutionContext';
 import { ExecutionContextModifier } from '../core/ExecutionContextModifier';
@@ -32,7 +32,7 @@ export class Evolve implements ExecutionContextModifier {
     const currentSrcTxId = executionContext.contractDefinition.srcTxId;
 
     if (evolvedSrcTxId) {
-      this.logger.debug('Checking evolve:', {
+      console.log('Checking evolve:', {
         current: currentSrcTxId,
         evolvedSrcTxId
       });
@@ -55,13 +55,18 @@ export class Evolve implements ExecutionContextModifier {
           this.logger.debug('evolved to:', {
             evolve: evolvedSrcTxId,
             newSrcTxId: executionContext.contractDefinition.srcTxId,
-            current: currentSrcTxId,
-            txId: executionContext.contractDefinition.txId
+            currentSrcTxId: currentSrcTxId,
+            contract: executionContext.contractDefinition.txId
           });
 
           return executionContext;
         } catch (e) {
           if (e.name === 'ContractError' && e.subtype === 'unsafeClientSkip') {
+            console.trace('Tried evolving to unsafe', {
+              evolve: evolvedSrcTxId,
+              currentSrc: currentSrcTxId,
+              txId: executionContext.contractDefinition.txId
+            });
             throw e;
           } else {
             throw new SmartWeaveError(SmartWeaveErrorType.CONTRACT_NOT_FOUND, {

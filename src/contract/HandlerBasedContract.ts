@@ -9,7 +9,8 @@ import {
   InteractionResult,
   HandlerApi,
   ContractInteraction,
-  InteractionData
+  InteractionData,
+  ContractError
 } from '../core/modules/impl/HandlerExecutorFactory';
 import { LexicographicalInteractionsSorter } from '../core/modules/impl/LexicographicalInteractionsSorter';
 import { InteractionsSorter } from '../core/modules/InteractionsSorter';
@@ -527,8 +528,26 @@ export class HandlerBasedContract<State> implements Contract<State> {
     try {
       return (await executorFactory.create(contractDefinition, this._evaluationOptions)) as HandlerApi<State>;
     } catch (e) {
-      if (e.name == 'ContractError' && e.subtype == 'unsafeClientSkip' && this._parentContract == null) {
-        return null;
+      if (e.name == 'ContractError' && e.subtype == 'unsafeClientSkip') {
+        if (this._parentContract == null) {
+          return null;
+        } else {
+          console.info('Rethrowing ContractError with trace data');
+          throw new ContractError(
+            e.message,
+            e.subtype,
+            e.uuid,
+            JSON.stringify(
+              {
+                contract: contractDefinition.txId,
+                parentContract: this._parentContract?.txId(),
+                callingTx: JSON.stringify(this._innerCallData.callingInteraction)
+              },
+              null,
+              2
+            )
+          );
+        }
       } else {
         throw e;
       }

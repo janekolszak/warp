@@ -12,12 +12,6 @@ export type BenchmarkStats = { gatewayCommunication: number; stateEvaluation: nu
 
 export type SigningFunction = (tx: Transaction) => Promise<void>;
 export type Signature = { signer: SigningFunction; signatureType: 'arweave' | 'ethereum' };
-export class ContractError extends Error {
-  constructor(message) {
-    super(message);
-    this.name = 'ContractError';
-  }
-}
 
 interface BundlrResponse {
   id: string;
